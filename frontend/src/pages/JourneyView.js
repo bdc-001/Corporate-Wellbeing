@@ -6,14 +6,12 @@ import {
   Card,
   CardContent,
   Chip,
-  Grid,
   Divider,
   Stack,
   Avatar,
 } from '@mui/material';
 import PhoneIcon from '@mui/icons-material/Phone';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import EmailIcon from '@mui/icons-material/Email';
 import client from '../api/client';
 
 function JourneyView() {
@@ -23,6 +21,7 @@ function JourneyView() {
 
   useEffect(() => {
     fetchJourney();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId]);
 
   const fetchJourney = async () => {

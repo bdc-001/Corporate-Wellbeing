@@ -40,7 +40,6 @@ import {
   Delete as DeleteIcon,
   ExpandMore as ExpandMoreIcon,
   Upload as UploadIcon,
-  Download as DownloadIcon,
   Visibility,
   VisibilityOff,
   KeyboardArrowDown,
@@ -64,9 +63,7 @@ function Settings() {
   const [roles, setRoles] = useState([]);
   const [permissionGroups, setPermissionGroups] = useState([]);
   const [teams, setTeams] = useState([]);
-  const [useCases, setUseCases] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // User Manager State
@@ -121,44 +118,35 @@ function Settings() {
     } else if (tabValue === 2) {
       fetchUsers();
       fetchTeams();
-      fetchUseCases();
       fetchVendors();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabValue]);
 
   const fetchUsers = async () => {
     try {
-      setLoading(true);
       const response = await api.get('/users');
       setUsers(response.data.users || []);
     } catch (error) {
       showSnackbar('Failed to fetch users', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchRoles = async () => {
     try {
-      setLoading(true);
       const response = await api.get('/roles');
       setRoles(response.data.roles || []);
     } catch (error) {
       showSnackbar('Failed to fetch roles', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchPermissions = async () => {
     try {
-      setLoading(true);
       const response = await api.get('/permissions');
       setPermissionGroups(response.data.permission_groups || []);
     } catch (error) {
       showSnackbar('Failed to fetch permissions', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -171,14 +159,6 @@ function Settings() {
     }
   };
 
-  const fetchUseCases = async () => {
-    try {
-      const response = await api.get('/use-cases');
-      setUseCases(response.data.use_cases || []);
-    } catch (error) {
-      showSnackbar('Failed to fetch use cases', 'error');
-    }
-  };
 
   const fetchVendors = async () => {
     try {
@@ -189,27 +169,6 @@ function Settings() {
     }
   };
 
-  const handleAssignTeam = async (userId, teamId) => {
-    try {
-      const user = users.find(u => u.id === userId);
-      if (!user) return;
-
-      await api.put(`/users/${userId}`, {
-        name: user.name,
-        phone: user.phone,
-        role_id: user.role_id,
-        manager_id: user.manager_id,
-        auditor_id: user.auditor_id,
-        team_id: teamId ? parseInt(teamId) : null,
-        user_type: user.user_type,
-        location: user.location,
-      });
-      showSnackbar('Team assignment updated successfully');
-      fetchUsers();
-    } catch (error) {
-      showSnackbar(error.response?.data?.error || 'Failed to update team assignment', 'error');
-    }
-  };
 
   const handleSaveTeam = async () => {
     try {
@@ -259,7 +218,6 @@ function Settings() {
   };
 
   const handleDeleteTeam = async (teamId) => {
-    const team = teams.find(t => t.id === teamId);
     const memberCount = users.filter(u => u.team_id === teamId).length;
     
     if (memberCount > 0) {

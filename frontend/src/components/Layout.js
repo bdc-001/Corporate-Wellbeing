@@ -36,14 +36,12 @@ import CircleIcon from '@mui/icons-material/Circle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import Tooltip from '@mui/material/Tooltip';
 import PersonIcon from '@mui/icons-material/Person';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import BusinessIcon from '@mui/icons-material/Business';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TimelineIcon from '@mui/icons-material/Timeline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import StarIcon from '@mui/icons-material/Star';
 import SpeedIcon from '@mui/icons-material/Speed';
@@ -52,7 +50,7 @@ import CloudIcon from '@mui/icons-material/Cloud';
 import Logo from './Logo';
 import { useAuth } from '../contexts/AuthContext';
 import { DRAWER_WIDTH, typography } from '../theme/typography';
-import api from '../api/client';
+// import api from '../api/client'; // Uncomment when implementing real notification fetching
 
 const drawerWidth = DRAWER_WIDTH;
 
@@ -126,28 +124,29 @@ function Layout({ children }) {
   const handleNotificationOpen = (event) => {
     setNotificationAnchor(event.currentTarget);
     // For design preview, skip API call
-    // fetchNotifications();
+    // Uncomment for real API: fetchNotifications();
   };
 
   const handleNotificationClose = () => {
     setNotificationAnchor(null);
   };
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await api.get('/realtime/alerts', {
-        params: {
-          limit: 20,
-          unresolved: true,
-        }
-      });
-      const alerts = response.data.alerts || [];
-      setNotifications(alerts);
-      setUnreadCount(alerts.filter(a => !a.acknowledged).length);
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    }
-  };
+  // Uncomment for real API integration:
+  // const fetchNotifications = async () => {
+  //   try {
+  //     const response = await api.get('/realtime/alerts', {
+  //       params: {
+  //         limit: 20,
+  //         unresolved: true,
+  //       }
+  //     });
+  //     const alerts = response.data.alerts || [];
+  //     setNotifications(alerts);
+  //     setUnreadCount(alerts.filter(a => !a.acknowledged).length);
+  //   } catch (error) {
+  //     console.error('Failed to fetch notifications:', error);
+  //   }
+  // };
 
   const handleAcknowledgeNotification = async (alertId) => {
     // For design preview, update local state
@@ -295,6 +294,7 @@ function Layout({ children }) {
     // Uncomment for real API polling:
     // const interval = setInterval(fetchNotifications, 30000);
     // return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getNotificationIcon = (severity) => {

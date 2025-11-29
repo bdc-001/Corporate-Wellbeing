@@ -36,6 +36,7 @@ function IntentsDashboard() {
 
   useEffect(() => {
     fetchIntents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange, modelCode, teamId, agentId]);
 
   const fetchTeams = async () => {

@@ -68,6 +68,7 @@ function Profile() {
     if (authUser && authUser.id) {
       fetchUserProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser]);
 
   const fetchUserProfile = async () => {

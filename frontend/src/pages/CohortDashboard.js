@@ -29,7 +29,6 @@ import axios from 'axios';
 const API_BASE = 'http://localhost:8080/v1';
 
 function CohortDashboard() {
-  const [cohortData, setCohortData] = useState([]);
   const [retentionData, setRetentionData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSegment, setSelectedSegment] = useState(1);
@@ -42,6 +41,7 @@ function CohortDashboard() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSegment]);
 
   const loadData = async () => {

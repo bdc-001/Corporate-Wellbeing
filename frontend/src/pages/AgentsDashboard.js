@@ -37,6 +37,7 @@ function AgentsDashboard() {
 
   useEffect(() => {
     fetchAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange, modelCode, teamId, agentId]);
 
   const fetchTeams = async () => {
