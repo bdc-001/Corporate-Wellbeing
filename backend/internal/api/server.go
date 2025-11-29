@@ -1,32 +1,67 @@
 package api
 
 import (
+	"context"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/convin/crae/internal/api/handlers"
+	"github.com/convin/crae/internal/config"
+	"github.com/convin/crae/internal/database"
+	"github.com/convin/crae/internal/logger"
+	"github.com/convin/crae/internal/middleware"
 	"github.com/convin/crae/internal/services"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 )
 
 type Server struct {
-	Router *gin.Engine
-	db     *sqlx.DB
+	Router     *gin.Engine
+	db         *sqlx.DB
+	logger     *zap.Logger
+	cfg        *config.Config
+	httpServer *http.Server
 }
 
-func NewServer(db *sqlx.DB, cfg interface{}) *Server {
-	router := gin.Default()
+func NewServer(db *sqlx.DB, cfg *config.Config) (*Server, error) {
+	// Initialize logger
+	appLogger, err := logger.NewLogger(cfg.LogLevel, cfg.LogFormat, cfg.LogFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set Gin mode
+	gin.SetMode(cfg.GinMode)
+
+	router := gin.New()
+
+	// Add recovery middleware with structured logging
+	router.Use(middleware.RecoveryMiddleware(appLogger))
+
+	// Add request logging middleware
+	router.Use(middleware.LoggerMiddleware(appLogger))
 
 	// Configure CORS
-	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+	corsConfig := cors.Config{
+		AllowOrigins:     cfg.CORSAllowOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "X-Tenant-ID", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "X-Tenant-ID", "Authorization", "X-API-Key"},
 		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowCredentials: cfg.CORSAllowCredentials,
 		MaxAge:           12 * time.Hour,
-	}))
+	}
+	router.Use(cors.New(corsConfig))
+
+	// Add rate limiting if enabled
+	if cfg.RateLimitEnabled {
+		limiter := middleware.NewRateLimiter(cfg.RateLimitRPS, cfg.RateLimitBurst)
+		router.Use(middleware.RateLimitMiddleware(limiter))
+	}
 
 	// Initialize all services
 	identitySvc := services.NewIdentityService(db)
@@ -76,6 +111,28 @@ func NewServer(db *sqlx.DB, cfg interface{}) *Server {
 
 	v1 := router.Group("/v1")
 	{
+		// ====================================================================
+		// Webhooks for Live Call Flow Integration
+		// ====================================================================
+		if cfg.EnableWebhooks {
+			webhooks := v1.Group("/webhooks")
+			{
+				// Convin webhook with signature verification
+				convinWebhooks := webhooks.Group("/convin")
+				if cfg.ConvinWebhookSecret != "" {
+					convinWebhooks.Use(middleware.WebhookSignatureMiddleware(cfg.ConvinWebhookSecret))
+				}
+				convinWebhooks.POST("", h.HandleConvinWebhook)
+
+				// Generic telephony webhook
+				telephonyWebhooks := webhooks.Group("/telephony")
+				if cfg.TelephonyWebhookSecret != "" {
+					telephonyWebhooks.Use(middleware.WebhookSignatureMiddleware(cfg.TelephonyWebhookSecret))
+				}
+				telephonyWebhooks.POST("", h.HandleGenericTelephonyWebhook)
+			}
+		}
+
 		// ====================================================================
 		// Data Ingestion APIs
 		// ====================================================================
@@ -159,8 +216,9 @@ func NewServer(db *sqlx.DB, cfg interface{}) *Server {
 		// ====================================================================
 		realtime := v1.Group("/realtime")
 		{
-			realtime.GET("/alerts", h.GetAlerts)
-			realtime.POST("/alerts/:id/acknowledge", h.AcknowledgeAlert)
+			realtime.POST("/alerts", h.CreateAlert)                      // Create alert (for testing)
+			realtime.GET("/alerts", h.GetAlerts)                         // Get alerts
+			realtime.POST("/alerts/:id/acknowledge", h.AcknowledgeAlert) // Acknowledge alert
 		}
 
 		// ====================================================================
@@ -293,10 +351,24 @@ func NewServer(db *sqlx.DB, cfg interface{}) *Server {
 	// Health Check & System Info
 	// ========================================================================
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"service": "Convin Revenue Attribution Engine (CRAE)",
-			"version": "2.0.0-comprehensive",
+		// Check database connectivity
+		dbHealthy := true
+		if err := database.HealthCheck(db); err != nil {
+			dbHealthy = false
+			appLogger.Error("Database health check failed", zap.Error(err))
+		}
+
+		status := http.StatusOK
+		if !dbHealthy {
+			status = http.StatusServiceUnavailable
+		}
+
+		c.JSON(status, gin.H{
+			"status":    "ok",
+			"service":   "Convin Revenue Attribution Engine (CRAE)",
+			"version":   "2.0.0-production",
+			"timestamp": time.Now().UTC(),
+			"database":  map[string]interface{}{"healthy": dbHealthy},
 			"features": []string{
 				"Multi-Touch Attribution",
 				"Account-Based Marketing (ABM)",
@@ -310,12 +382,75 @@ func NewServer(db *sqlx.DB, cfg interface{}) *Server {
 				"A/B Testing & Experiments",
 				"Feature Flags",
 				"Marketing Mix Modeling (MMM)",
+				"Live Call Flow Integration",
 			},
 		})
+	})
+
+	// Readiness probe
+	router.GET("/ready", func(c *gin.Context) {
+		if err := database.HealthCheck(db); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	})
+
+	// Liveness probe
+	router.GET("/live", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "alive"})
 	})
 
 	return &Server{
 		Router: router,
 		db:     db,
+		logger: appLogger,
+		cfg:    cfg,
+	}, nil
+}
+
+// Start starts the HTTP server with graceful shutdown
+func (s *Server) Start() error {
+	s.httpServer = &http.Server{
+		Addr:         ":" + s.cfg.Port,
+		Handler:      s.Router,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	// Start server in a goroutine
+	go func() {
+		s.logger.Info("Server starting", zap.String("port", s.cfg.Port), zap.String("environment", s.cfg.Environment))
+		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			s.logger.Fatal("Server failed to start", zap.Error(err))
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	s.logger.Info("Shutting down server...")
+
+	// Graceful shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := s.httpServer.Shutdown(ctx); err != nil {
+		s.logger.Error("Server forced to shutdown", zap.Error(err))
+		return err
+	}
+
+	s.logger.Info("Server exited gracefully")
+	return nil
+}
+
+// Close closes database connections
+func (s *Server) Close() error {
+	if s.db != nil {
+		return s.db.Close()
+	}
+	return nil
 }

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notifications - Economics Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #F9FAFB;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1F2937;
+            margin-bottom: 8px;
+            font-size: 1.875rem;
+            font-weight: 700;
+        }
+        .subtitle {
+            color: #6B7280;
+            margin-bottom: 32px;
+            font-size: 0.875rem;
+        }
+        .form-group {
+            margin-bottom: 24px;
+        }
+        label {
+            display: block;
+            color: #374151;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 0.875rem;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-family: inherit;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        button {
+            background: #1A62F2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        button:hover {
+            background: #1557D9;
+        }
+        button.secondary {
+            background: #6B7280;
+        }
+        button.secondary:hover {
+            background: #4B5563;
+        }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 0.875rem;
+        }
+        .alert.success {
+            background: #D1FAE5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+        .alert.error {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .preset-btn {
+            background: #F3F4F6;
+            color: #374151;
+            border: 1px solid #D1D5DB;
+        }
+        .preset-btn:hover {
+            background: #E5E7EB;
+        }
+        #result {
+            margin-top: 24px;
+            padding: 16px;
+            background: #F9FAFB;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Test Notifications</h1>
+        <p class="subtitle">Create test notifications to verify the notification center</p>
+
+        <div id="alert-container"></div>
+
+        <div class="preset-buttons">
+            <button class="preset-btn" onclick="loadPreset('error')">Error Alert</button>
+            <button class="preset-btn" onclick="loadPreset('warning')">Warning Alert</button>
+            <button class="preset-btn" onclick="loadPreset('info')">Info Alert</button>
+            <button class="preset-btn" onclick="loadPreset('success')">Success Alert</button>
+            <button class="preset-btn" onclick="loadPreset('critical')">Critical Alert</button>
+        </div>
+
+        <form id="notificationForm">
+            <div class="form-group">
+                <label for="apiUrl">API URL</label>
+                <input type="text" id="apiUrl" value="http://localhost:8080/v1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="token">Auth Token</label>
+                <input type="text" id="token" placeholder="Enter your auth token" required>
+            </div>
+
+            <div class="form-group">
+                <label for="tenantId">Tenant ID</label>
+                <input type="number" id="tenantId" value="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="alertType">Alert Type</label>
+                <input type="text" id="alertType" placeholder="e.g., system_error" required>
+            </div>
+
+            <div class="form-group">
+                <label for="severity">Severity</label>
+                <select id="severity" required>
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="error">Error</option>
+                    <option value="success">Success</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text" id="title" placeholder="Alert title" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" placeholder="Alert description"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="entityType">Entity Type (optional)</label>
+                <input type="text" id="entityType" placeholder="e.g., system, customer">
+            </div>
+
+            <div class="form-group">
+                <label for="entityId">Entity ID (optional)</label>
+                <input type="number" id="entityId" placeholder="Entity ID">
+            </div>
+
+            <button type="submit">Create Notification</button>
+            <button type="button" class="secondary" onclick="createAllPresets()">Create All Presets</button>
+        </form>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const presets = {
+            error: {
+                alert_type: 'system_error',
+                severity: 'error',
+                title: 'Database Connection Failed',
+                description: 'Unable to connect to primary database. Fallback to replica.',
+                entity_type: 'system',
+                entity_id: null
+            },
+            warning: {
+                alert_type: 'data_quality',
+                severity: 'warning',
+                title: 'Low Data Quality Score',
+                description: 'Data quality score dropped below 80% for the last hour.',
+                entity_type: 'data_quality',
+                entity_id: null
+            },
+            info: {
+                alert_type: 'attribution_complete',
+                severity: 'info',
+                title: 'Attribution Run Completed',
+                description: 'Q1 2024 attribution analysis has been completed successfully.',
+                entity_type: 'attribution_run',
+                entity_id: 123
+            },
+            success: {
+                alert_type: 'integration_success',
+                severity: 'success',
+                title: 'Salesforce Sync Successful',
+                description: 'Successfully synced 250 contacts from Salesforce.',
+                entity_type: 'integration',
+                entity_id: 5
+            },
+            critical: {
+                alert_type: 'fraud_detected',
+                severity: 'error',
+                title: 'Potential Fraud Detected',
+                description: 'Unusual pattern detected in conversion events. Requires immediate review.',
+                entity_type: 'fraud_incident',
+                entity_id: 789
+            }
+        };
+
+        function loadPreset(type) {
+            const preset = presets[type];
+            document.getElementById('alertType').value = preset.alert_type;
+            document.getElementById('severity').value = preset.severity;
+            document.getElementById('title').value = preset.title;
+            document.getElementById('description').value = preset.description;
+            document.getElementById('entityType').value = preset.entity_type || '';
+            document.getElementById('entityId').value = preset.entity_id || '';
+        }
+
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alert-container');
+            container.innerHTML = `<div class="alert ${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        async function createNotification(data) {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const token = document.getElementById('token').value;
+            const tenantId = document.getElementById('tenantId').value;
+
+            try {
+                const response = await fetch(`${apiUrl}/realtime/alerts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-Tenant-ID': tenantId
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('✅ Notification created successfully!', 'success');
+                    document.getElementById('result').textContent = JSON.stringify(result, null, 2);
+                } else {
+                    showAlert(`❌ Error: ${result.error || 'Failed to create notification'}`, 'error');
+                    document.getElementById('result').textContent = JSON.stringify(result, null, 2);
+                }
+            } catch (error) {
+                showAlert(`❌ Network error: ${error.message}`, 'error');
+                document.getElementById('result').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        document.getElementById('notificationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                alert_type: document.getElementById('alertType').value,
+                severity: document.getElementById('severity').value,
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value || null,
+                entity_type: document.getElementById('entityType').value || null,
+                entity_id: document.getElementById('entityId').value ? parseInt(document.getElementById('entityId').value) : null
+            };
+
+            await createNotification(data);
+        });
+
+        async function createAllPresets() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const token = document.getElementById('token').value;
+            const tenantId = document.getElementById('tenantId').value;
+
+            if (!token) {
+                showAlert('❌ Please enter your auth token first', 'error');
+                return;
+            }
+
+            showAlert('Creating all test notifications...', 'info');
+            
+            let results = [];
+            for (const [key, preset] of Object.entries(presets)) {
+                try {
+                    const response = await fetch(`${apiUrl}/realtime/alerts`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                            'X-Tenant-ID': tenantId
+                        },
+                        body: JSON.stringify(preset)
+                    });
+                    const result = await response.json();
+                    results.push({ preset: key, success: response.ok, result });
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Delay between requests
+                } catch (error) {
+                    results.push({ preset: key, success: false, error: error.message });
+                }
+            }
+
+            const successCount = results.filter(r => r.success).length;
+            showAlert(`✅ Created ${successCount}/${results.length} notifications!`, 'success');
+            document.getElementById('result').textContent = JSON.stringify(results, null, 2);
+        }
+    </script>
+</body>
+</html>
+

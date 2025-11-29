@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Grid, Card, CardContent, Button } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
+import { typography } from '../theme/typography';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import TimelineIcon from '@mui/icons-material/Timeline';
@@ -112,11 +113,8 @@ function Dashboard() {
         <Typography
           variant="h1"
           sx={{
-            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-            fontWeight: 700,
+            ...typography.pageTitle,
             mb: 1,
-            color: '#1F2937',
-            lineHeight: 1.2,
             '& .username': {
               background: 'linear-gradient(to right, #6366F1, #8B5CF6)',
               WebkitBackgroundClip: 'text',
@@ -131,10 +129,8 @@ function Dashboard() {
         <Typography
           variant="body1"
           sx={{
+            ...typography.bodyText,
             color: '#9CA3AF',
-            fontSize: '1rem',
-            fontWeight: 400,
-            lineHeight: 1.5,
           }}
         >
           Here's what's happening with your revenue attribution platform
@@ -169,9 +165,7 @@ function Dashboard() {
                       <Typography
                         variant="body2"
                         sx={{
-                          color: '#9CA3AF',
-                          fontSize: '0.875rem',
-                          fontWeight: 500,
+                          ...typography.cardSubtitle,
                           mb: 1,
                         }}
                       >
@@ -180,10 +174,7 @@ function Dashboard() {
                       <Typography
                         variant="h4"
                         sx={{
-                          fontWeight: 700,
-                          color: '#1F2937',
-                          fontSize: { xs: '1.75rem', sm: '2rem' },
-                          lineHeight: 1,
+                          ...typography.statValue,
                         }}
                       >
                         {stat.value}
@@ -217,11 +208,8 @@ function Dashboard() {
             <Typography
               variant="h2"
               sx={{
-                fontWeight: 700,
-                color: '#1F2937',
+                ...typography.sectionHeader,
                 mb: 3,
-                fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                lineHeight: 1.2,
               }}
             >
               Quick Actions
@@ -267,11 +255,8 @@ function Dashboard() {
                           <Typography
                             variant="h6"
                             sx={{
-                              fontWeight: 700,
-                              color: '#1F2937',
-                              fontSize: '1.125rem',
+                              ...typography.cardTitle,
                               mb: 0.5,
-                              lineHeight: 1.3,
                             }}
                           >
                             {action.title}
@@ -279,9 +264,7 @@ function Dashboard() {
                           <Typography
                             variant="body2"
                             sx={{
-                              color: '#9CA3AF',
-                              fontSize: '0.875rem',
-                              lineHeight: 1.5,
+                              ...typography.cardSubtitle,
                             }}
                           >
                             {action.description}
@@ -354,11 +337,8 @@ function Dashboard() {
             <Typography
               variant="h2"
               sx={{
-                fontWeight: 700,
-                color: '#1F2937',
+                ...typography.sectionHeader,
                 mb: 3,
-                fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                lineHeight: 1.2,
               }}
             >
               Recent Activity
@@ -412,11 +392,10 @@ function Dashboard() {
                           <Typography
                             variant="body2"
                             sx={{
+                              ...typography.bodyTextSmall,
                               fontWeight: 600,
                               color: '#1F2937',
-                              fontSize: '0.875rem',
                               mb: 0.25,
-                              lineHeight: 1.4,
                             }}
                           >
                             {activity.title}
@@ -424,9 +403,7 @@ function Dashboard() {
                           <Typography
                             variant="caption"
                             sx={{
-                              color: '#9CA3AF',
-                              fontSize: '0.75rem',
-                              fontWeight: 400,
+                              ...typography.caption,
                             }}
                           >
                             {activity.time}
@@ -511,10 +488,8 @@ function Dashboard() {
               <Typography
                 variant="h5"
                 sx={{
-                  fontWeight: 700,
-                  color: '#1F2937',
+                  ...typography.cardTitle,
                   mb: 1,
-                  fontSize: '1.25rem',
                 }}
               >
                 Analytics & Insights
@@ -523,10 +498,8 @@ function Dashboard() {
               <Typography
                 variant="body2"
                 sx={{
-                  color: '#9CA3AF',
-                  fontSize: '0.875rem',
+                  ...typography.cardSubtitle,
                   mb: 3,
-                  lineHeight: 1.6,
                 }}
               >
                 Track performance metrics and revenue patterns
@@ -593,10 +566,8 @@ function Dashboard() {
               <Typography
                 variant="h5"
                 sx={{
-                  fontWeight: 700,
-                  color: '#1F2937',
+                  ...typography.cardTitle,
                   mb: 1,
-                  fontSize: '1.25rem',
                 }}
               >
                 Data Quality Manager
@@ -605,10 +576,8 @@ function Dashboard() {
               <Typography
                 variant="body2"
                 sx={{
-                  color: '#9CA3AF',
-                  fontSize: '0.875rem',
+                  ...typography.cardSubtitle,
                   mb: 3,
-                  lineHeight: 1.6,
                 }}
               >
                 Monitor data integrity and accuracy

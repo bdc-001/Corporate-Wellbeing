@@ -20,6 +20,11 @@ func NewIngestionService(db *sqlx.DB, identitySvc *IdentityService) *IngestionSe
 	}
 }
 
+// GetDB returns the database connection (for use in handlers)
+func (s *IngestionService) GetDB() *sqlx.DB {
+	return s.db
+}
+
 // IngestInteractionRequest represents an interaction ingestion request
 type IngestInteractionRequest struct {
 	ExternalInteractionID string                            `json:"external_interaction_id"`

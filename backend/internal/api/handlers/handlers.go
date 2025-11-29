@@ -794,6 +794,43 @@ func (h *Handlers) IngestEvent(c *gin.Context) {
 	c.JSON(http.StatusAccepted, event)
 }
 
+// CreateAlert creates a new alert (for testing/admin purposes)
+func (h *Handlers) CreateAlert(c *gin.Context) {
+	tenantID, err := h.getTenantID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tenant ID"})
+		return
+	}
+
+	var alert services.Alert
+	if err := c.ShouldBindJSON(&alert); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate required fields
+	if alert.AlertType == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "alert_type is required"})
+		return
+	}
+	if alert.Severity == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "severity is required"})
+		return
+	}
+	if alert.Title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title is required"})
+		return
+	}
+
+	err = h.realtimeSvc.CreateAlert(tenantID, &alert)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, alert)
+}
+
 // GetAlerts retrieves alerts
 func (h *Handlers) GetAlerts(c *gin.Context) {
 	tenantID, err := h.getTenantID(c)
@@ -831,8 +868,20 @@ func (h *Handlers) AcknowledgeAlert(c *gin.Context) {
 		return
 	}
 
-	acknowledgedBy := c.Query("by")
-	err = h.realtimeSvc.AcknowledgeAlert(tenantID, alertID, acknowledgedBy)
+	// Try to get from body first, then query param
+	var req struct {
+		By string `json:"by"`
+	}
+	if err := c.ShouldBindJSON(&req); err == nil && req.By != "" {
+		err = h.realtimeSvc.AcknowledgeAlert(tenantID, alertID, req.By)
+	} else {
+		acknowledgedBy := c.Query("by")
+		if acknowledgedBy == "" {
+			acknowledgedBy = "system" // Default if not provided
+		}
+		err = h.realtimeSvc.AcknowledgeAlert(tenantID, alertID, acknowledgedBy)
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

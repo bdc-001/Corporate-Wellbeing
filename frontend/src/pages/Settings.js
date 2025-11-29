@@ -48,6 +48,7 @@ import {
   PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import api from '../api/client';
+import { typography } from '../theme/typography';
 
 function TabPanel({ children, value, index }) {
   return (
@@ -490,7 +491,7 @@ function Settings() {
 
   return (
     <Box sx={{ width: '100%' }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 700 }}>
+      <Typography variant="h4" sx={{ ...typography.pageTitle, mb: 3 }}>
         Settings
       </Typography>
 
@@ -505,7 +506,7 @@ function Settings() {
       {/* User Manager Tab */}
       <TabPanel value={tabValue} index={0}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="h6">Users</Typography>
+          <Typography variant="h6" sx={{ ...typography.sectionHeader, fontSize: '1.125rem' }}>Users</Typography>
           <Box>
             <input
               accept=".csv,.xlsx"
@@ -604,7 +605,7 @@ function Settings() {
       {/* Role Manager Tab */}
       <TabPanel value={tabValue} index={1}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="h6">Roles</Typography>
+          <Typography variant="h6" sx={{ ...typography.sectionHeader, fontSize: '1.125rem' }}>Roles</Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -671,7 +672,7 @@ function Settings() {
       {/* Team Manager Tab */}
       <TabPanel value={tabValue} index={2}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-          <Typography variant="h6">Team Management</Typography>
+          <Typography variant="h6" sx={{ ...typography.sectionHeader, fontSize: '1.125rem' }}>Team Management</Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}

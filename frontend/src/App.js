@@ -52,16 +52,37 @@ const theme = createTheme({
     fontFamily: '"Figtree", "Inter", sans-serif',
     h1: {
       fontWeight: 800,
+      letterSpacing: '-0.02em',
     },
     h2: {
       fontWeight: 700,
+      letterSpacing: '-0.02em',
     },
     h3: {
       fontWeight: 600,
     },
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    body1: {
+      lineHeight: 1.75,
+    },
+    body2: {
+      lineHeight: 1.5,
+    },
     button: {
       textTransform: 'none',
       fontWeight: 500,
+      letterSpacing: '0.05em',
+    },
+    code: {
+      fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", "Monaco", "Courier New", monospace',
     },
   },
   shape: {

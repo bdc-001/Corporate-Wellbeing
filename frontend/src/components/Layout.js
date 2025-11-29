@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
@@ -25,7 +25,19 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import SettingsIcon from '@mui/icons-material/Settings';
+import Badge from '@mui/material/Badge';
+import Popover from '@mui/material/Popover';
+import ListItemAvatar from '@mui/material/ListItemAvatar';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import WarningIcon from '@mui/icons-material/Warning';
+import InfoIcon from '@mui/icons-material/Info';
+import CircleIcon from '@mui/icons-material/Circle';
 import LogoutIcon from '@mui/icons-material/Logout';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import Tooltip from '@mui/material/Tooltip';
 import PersonIcon from '@mui/icons-material/Person';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
@@ -39,8 +51,10 @@ import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import CloudIcon from '@mui/icons-material/Cloud';
 import Logo from './Logo';
 import { useAuth } from '../contexts/AuthContext';
+import { DRAWER_WIDTH, typography } from '../theme/typography';
+import api from '../api/client';
 
-const drawerWidth = 280;
+const drawerWidth = DRAWER_WIDTH;
 
 const menuItems = [
   { 
@@ -74,6 +88,9 @@ const menuItems = [
 function Layout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [notificationAnchor, setNotificationAnchor] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -105,17 +122,232 @@ function Layout({ children }) {
     navigate('/login');
   };
 
+  // Notification handlers
+  const handleNotificationOpen = (event) => {
+    setNotificationAnchor(event.currentTarget);
+    // For design preview, skip API call
+    // fetchNotifications();
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchor(null);
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/realtime/alerts', {
+        params: {
+          limit: 20,
+          unresolved: true,
+        }
+      });
+      const alerts = response.data.alerts || [];
+      setNotifications(alerts);
+      setUnreadCount(alerts.filter(a => !a.acknowledged).length);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
+  const handleAcknowledgeNotification = async (alertId) => {
+    // For design preview, update local state
+    setNotifications(prev => 
+      prev.map(n => 
+        n.id === alertId ? { ...n, acknowledged: true } : n
+      )
+    );
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    
+    // Uncomment for real API call:
+    // try {
+    //   await api.post(`/realtime/alerts/${alertId}/acknowledge`, {
+    //     by: user?.email || 'user'
+    //   });
+    //   fetchNotifications();
+    // } catch (error) {
+    //   console.error('Failed to acknowledge notification:', error);
+    // }
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(n => ({ ...n, acknowledged: true }))
+    );
+    setUnreadCount(0);
+    
+    // Uncomment for real API call:
+    // notifications.forEach(n => {
+    //   if (!n.acknowledged) {
+    //     api.post(`/realtime/alerts/${n.id}/acknowledge`, {
+    //       by: user?.email || 'user'
+    //     });
+    //   }
+    // });
+  };
+
+  const handleRemoveNotification = (alertId, event) => {
+    event.stopPropagation(); // Prevent triggering acknowledge
+    setNotifications(prev => {
+      const removed = prev.find(n => n.id === alertId);
+      if (removed && !removed.acknowledged) {
+        setUnreadCount(count => Math.max(0, count - 1));
+      }
+      return prev.filter(n => n.id !== alertId);
+    });
+    
+    // Uncomment for real API call:
+    // try {
+    //   await api.delete(`/realtime/alerts/${alertId}`);
+    //   fetchNotifications();
+    // } catch (error) {
+    //   console.error('Failed to remove notification:', error);
+    // }
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+    setUnreadCount(0);
+    
+    // Uncomment for real API call:
+    // notifications.forEach(n => {
+    //   api.delete(`/realtime/alerts/${n.id}`);
+    // });
+  };
+
+  // Dummy notifications for design preview
+  const dummyNotifications = [
+    {
+      id: 1,
+      alert_type: 'system_error',
+      severity: 'error',
+      title: 'Database Connection Failed',
+      description: 'Unable to connect to primary database. Fallback to replica.',
+      entity_type: 'system',
+      entity_id: null,
+      triggered_at: new Date().toISOString(),
+      acknowledged: false,
+    },
+    {
+      id: 2,
+      alert_type: 'data_quality',
+      severity: 'warning',
+      title: 'Low Data Quality Score',
+      description: 'Data quality score dropped below 80% for the last hour.',
+      entity_type: 'data_quality',
+      entity_id: null,
+      triggered_at: new Date(Date.now() - 5 * 60000).toISOString(), // 5 minutes ago
+      acknowledged: false,
+    },
+    {
+      id: 3,
+      alert_type: 'attribution_complete',
+      severity: 'info',
+      title: 'Attribution Run Completed',
+      description: 'Q1 2024 attribution analysis has been completed successfully.',
+      entity_type: 'attribution_run',
+      entity_id: 123,
+      triggered_at: new Date(Date.now() - 15 * 60000).toISOString(), // 15 minutes ago
+      acknowledged: false,
+    },
+    {
+      id: 4,
+      alert_type: 'integration_success',
+      severity: 'success',
+      title: 'Salesforce Sync Successful',
+      description: 'Successfully synced 250 contacts from Salesforce.',
+      entity_type: 'integration',
+      entity_id: 5,
+      triggered_at: new Date(Date.now() - 30 * 60000).toISOString(), // 30 minutes ago
+      acknowledged: true,
+    },
+    {
+      id: 5,
+      alert_type: 'fraud_detected',
+      severity: 'error',
+      title: 'Potential Fraud Detected',
+      description: 'Unusual pattern detected in conversion events. Requires immediate review.',
+      entity_type: 'fraud_incident',
+      entity_id: 789,
+      triggered_at: new Date(Date.now() - 60 * 60000).toISOString(), // 1 hour ago
+      acknowledged: false,
+    },
+    {
+      id: 6,
+      alert_type: 'performance_alert',
+      severity: 'warning',
+      title: 'High API Latency',
+      description: 'API response time exceeded 2 seconds for the last 10 minutes.',
+      entity_type: 'system',
+      entity_id: null,
+      triggered_at: new Date(Date.now() - 2 * 3600000).toISOString(), // 2 hours ago
+      acknowledged: false,
+    },
+  ];
+
+  // Fetch notifications on mount and set up polling
+  useEffect(() => {
+    // For design preview, use dummy notifications
+    // In production, uncomment the real fetch:
+    // fetchNotifications();
+    setNotifications(dummyNotifications);
+    setUnreadCount(dummyNotifications.filter(n => !n.acknowledged).length);
+    
+    // Uncomment for real API polling:
+    // const interval = setInterval(fetchNotifications, 30000);
+    // return () => clearInterval(interval);
+  }, []);
+
+  const getNotificationIcon = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'error':
+        return <ErrorIcon sx={{ color: '#F93739' }} />;
+      case 'warning':
+        return <WarningIcon sx={{ color: '#F8AA0D' }} />;
+      case 'success':
+        return <CheckCircleIcon sx={{ color: '#1AC468' }} />;
+      default:
+        return <InfoIcon sx={{ color: '#1A62F2' }} />;
+    }
+  };
+
+  const formatNotificationTime = (timestamp) => {
+    if (!timestamp) return 'Just now';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
   const drawer = (
     <Box sx={{ overflow: 'auto' }}>
-      <Toolbar sx={{ py: 2, px: 2, minHeight: '80px !important' }}>
+      <Toolbar sx={{ py: 3, px: 2.5, minHeight: 'auto !important', alignItems: 'center' }}>
         <Logo size="medium" showSubtitle={true} />
       </Toolbar>
-      <Divider sx={{ mx: 2 }} />
+      <Divider sx={{ mx: 2, mb: 1 }} />
       {menuItems.map((section, idx) => (
         <List
           key={section.section}
           subheader={
-            <ListSubheader component="div" sx={{ bgcolor: 'transparent', fontWeight: 600 }}>
+            <ListSubheader 
+              component="div" 
+              sx={{ 
+                bgcolor: 'transparent', 
+                ...typography.tableHeader,
+                fontSize: '0.75rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                py: 1.5,
+                px: 2,
+              }}
+            >
               {section.section}
             </ListSubheader>
           }
@@ -126,6 +358,8 @@ function Layout({ children }) {
                 selected={location.pathname === item.path}
                 onClick={() => handleNavigation(item.path)}
                 sx={{
+                  py: 1.25,
+                  px: 2,
                   '&.Mui-selected': {
                     backgroundColor: 'rgba(26, 98, 242, 0.1)',
                     '&:hover': {
@@ -139,7 +373,11 @@ function Layout({ children }) {
                 </ListItemIcon>
                 <ListItemText 
                   primary={item.text}
-                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                  primaryTypographyProps={{ 
+                    ...typography.bodyTextSmall,
+                    fontSize: '0.875rem',
+                    fontWeight: location.pathname === item.path ? 600 : 400,
+                  }}
                 />
               </ListItemButton>
             </ListItem>
@@ -202,12 +440,204 @@ function Layout({ children }) {
 
           {/* Right side icons */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 'auto' }}>
-            <IconButton color="inherit" size="small">
-              <NotificationsIcon />
+            {/* Notification Center */}
+            <IconButton 
+              color="inherit" 
+              size="small"
+              onClick={handleNotificationOpen}
+              sx={{ position: 'relative' }}
+            >
+              <Badge badgeContent={unreadCount} color="error" max={99}>
+                <NotificationsIcon />
+              </Badge>
             </IconButton>
-            <IconButton color="inherit" size="small">
-              <SettingsIcon />
-            </IconButton>
+            
+            {/* Notification Popover */}
+            <Popover
+              open={Boolean(notificationAnchor)}
+              anchorEl={notificationAnchor}
+              onClose={handleNotificationClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              PaperProps={{
+                sx: {
+                  mt: 1.5,
+                  width: 380,
+                  maxHeight: 500,
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                },
+              }}
+            >
+              <Box sx={{ p: 2, borderBottom: '1px solid #E5E7EB' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                    Notifications
+                  </Typography>
+                  {notifications.length > 0 && (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      {unreadCount > 0 && (
+                        <Tooltip title="Mark all as read">
+                          <IconButton
+                            size="small"
+                            onClick={handleMarkAllAsRead}
+                            sx={{ 
+                              color: 'primary.main',
+                              '&:hover': { backgroundColor: 'rgba(26, 98, 242, 0.08)' }
+                            }}
+                          >
+                            <DoneAllIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Clear all">
+                        <IconButton
+                          size="small"
+                          onClick={handleClearAll}
+                          sx={{ 
+                            color: '#9CA3AF',
+                            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)', color: '#F93739' }
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
+                </Box>
+                {unreadCount > 0 && (
+                  <Typography variant="caption" sx={{ color: '#9CA3AF' }}>
+                    {unreadCount} unread
+                  </Typography>
+                )}
+              </Box>
+              
+              <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                {notifications.length === 0 ? (
+                  <Box sx={{ p: 4, textAlign: 'center' }}>
+                    <NotificationsIcon sx={{ fontSize: 48, color: '#D1D5DB', mb: 2 }} />
+                    <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
+                      No notifications
+                    </Typography>
+                  </Box>
+                ) : (
+                  <List sx={{ p: 0 }}>
+                    {notifications.map((notification) => (
+                      <ListItem
+                        key={notification.id}
+                        sx={{
+                          px: 2,
+                          py: 1.5,
+                          borderBottom: '1px solid #F3F4F6',
+                          cursor: 'pointer',
+                          backgroundColor: notification.acknowledged ? 'transparent' : 'rgba(26, 98, 242, 0.05)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(26, 98, 242, 0.08)',
+                            '& .notification-actions': {
+                              opacity: 1,
+                            },
+                          },
+                        }}
+                        onClick={() => {
+                          if (!notification.acknowledged) {
+                            handleAcknowledgeNotification(notification.id);
+                          }
+                        }}
+                      >
+                        <ListItemAvatar>
+                          {getNotificationIcon(notification.severity)}
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 600, flex: 1 }}>
+                                {notification.title || notification.alert_type}
+                              </Typography>
+                              {!notification.acknowledged && (
+                                <CircleIcon sx={{ fontSize: 8, color: 'primary.main' }} />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <Box>
+                              <Typography variant="caption" sx={{ color: '#6B7280', display: 'block' }}>
+                                {notification.description || notification.title}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: '0.7rem' }}>
+                                {formatNotificationTime(notification.triggered_at)}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                        <Box
+                          className="notification-actions"
+                          sx={{
+                            display: 'flex',
+                            gap: 0.5,
+                            opacity: 0,
+                            transition: 'opacity 0.2s',
+                            ml: 1,
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {!notification.acknowledged && (
+                            <Tooltip title="Mark as read">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleAcknowledgeNotification(notification.id)}
+                                sx={{
+                                  color: 'primary.main',
+                                  '&:hover': { backgroundColor: 'rgba(26, 98, 242, 0.1)' }
+                                }}
+                              >
+                                <CheckCircleIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          <Tooltip title="Remove">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleRemoveNotification(notification.id, e)}
+                              sx={{
+                                color: '#9CA3AF',
+                                '&:hover': { backgroundColor: 'rgba(249, 55, 57, 0.1)', color: '#F93739' }
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </Box>
+              
+              {notifications.length > 0 && (
+                <Box sx={{ p: 2, borderTop: '1px solid #E5E7EB', textAlign: 'center' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'primary.main',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                      '&:hover': { textDecoration: 'underline' },
+                    }}
+                    onClick={() => navigate('/realtime')}
+                  >
+                    View All Notifications
+                  </Typography>
+                </Box>
+              )}
+            </Popover>
+
+            {/* User Avatar */}
             <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
               <Avatar
                 sx={{
@@ -258,7 +688,13 @@ function Layout({ children }) {
               </ListItemIcon>
               <ListItemText>Profile</ListItemText>
             </MenuItem>
-            <MenuItem onClick={handleMenuClose} sx={{ py: 1.5 }}>
+            <MenuItem 
+              onClick={() => {
+                handleMenuClose();
+                navigate('/settings');
+              }} 
+              sx={{ py: 1.5 }}
+            >
               <ListItemIcon>
                 <SettingsIcon fontSize="small" />
               </ListItemIcon>

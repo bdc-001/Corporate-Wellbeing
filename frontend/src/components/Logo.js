@@ -76,7 +76,7 @@ function Logo({ size = 'medium', showSubtitle = true }) {
             textOverflow: 'ellipsis',
           }}
         >
-          Convin Economics
+          Economics
         </Typography>
         {showSubtitle && (
           <Typography
