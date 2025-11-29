@@ -1,4 +1,4 @@
-# 🚀 Convin Revenue Attribution Engine (CRAE)
+# 🚀 Revenue Attribution Engine (CRAE)
 
 A comprehensive revenue attribution and analytics platform built with Go and React.
 
